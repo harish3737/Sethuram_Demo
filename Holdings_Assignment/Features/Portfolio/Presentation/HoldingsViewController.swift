@@ -187,7 +187,7 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
             self.rows = state.rows
             self.tableView.reloadData()
             self.toggleNoContentView(state.rows.isEmpty)
-            if state.error != nil {
+            if state.error != nil && !state.isLoading {
                 DispatchQueue.main.async {
                     if let alert = state.alertItem {
                         self.showAlert(alert)

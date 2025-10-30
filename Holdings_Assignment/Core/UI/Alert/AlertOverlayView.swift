@@ -17,7 +17,7 @@ class AlertOverlayView: UIView {
     var onDismiss: (() -> Void)?
 
     init(title: String, message: String, dismissButtonTitle: String) {
-        super.init(frame: UIScreen.main.bounds)
+        super.init(frame: .zero)
         setupUI(title: title, message: message, buttonTitle: dismissButtonTitle)
     }
 
@@ -81,6 +81,13 @@ class AlertOverlayView: UIView {
     func show(in parentView: UIView) {
         self.alpha = 0
         parentView.addSubview(self)
+        self.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            self.topAnchor.constraint(equalTo: parentView.topAnchor),
+            self.leadingAnchor.constraint(equalTo: parentView.leadingAnchor),
+            self.trailingAnchor.constraint(equalTo: parentView.trailingAnchor),
+            self.bottomAnchor.constraint(equalTo: parentView.bottomAnchor)
+        ])
         // Animate overlay fade in
         UIView.animate(withDuration: 0.3) {
             self.alpha = 1
