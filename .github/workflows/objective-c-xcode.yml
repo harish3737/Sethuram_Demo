@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: iOS Simulator Build
+    name: Build & Analyze (iOS Simulator Only)
     runs-on: macos-latest
 
     steps:
@@ -18,34 +18,36 @@ jobs:
       - name: Select Latest Xcode
         run: sudo xcode-select -switch /Applications/Xcode.app
 
-      - name: Show available iOS simulators
-        run: xcrun simctl list devices
+      - name: List available simulators
+        run: xcrun simctl list devices available
 
-      - name: Build for iOS Simulator ONLY
+      - name: Build and Analyze (iPhone Simulator)
         run: |
           # Detect workspace or project
-          if [ "`ls -A | grep -i \\.xcworkspace\$`" ]; then
+          if [ "`ls -A | grep -i \\.xcworkspace$`" ]; then
             filetype_parameter="workspace"
-            file_to_build="`ls -A | grep -i \\.xcworkspace\$`"
+            file_to_build="`ls -A | grep -i \\.xcworkspace$`"
           else
             filetype_parameter="project"
-            file_to_build="`ls -A | grep -i \\.xcodeproj\$`"
+            file_to_build="`ls -A | grep -i \\.xcodeproj$`"
           fi
-          
+
           scheme="Holdings_Assignment"
 
           echo "Building scheme: $scheme"
           echo "Using $filetype_parameter: $file_to_build"
 
-          # Get latest available iOS simulator dynamically
-          destination=$(xcrun simctl list devices available | grep -m 1 "iPhone" | awk -F'[()]' '{print $2}')
+          # Dynamically pick the first available iPhone simulator (OS 26.x)
+          destination_id=$(xcrun simctl list devices available | \
+            grep "iPhone" | grep "OS:26" | head -n 1 | awk -F'[()]' '{print $2}')
 
-          echo "Using destination: $destination"
+          echo "Using destination ID: $destination_id"
 
+          # Build only for iOS simulator – skip My Mac
           xcodebuild clean build analyze \
             -scheme "$scheme" \
             -"$filetype_parameter" "$file_to_build" \
-            -destination "platform=iOS Simulator,id=$destination" \
+            -destination "platform=iOS Simulator,id=$destination_id" \
             -skipUnavailableActions \
             -quiet \
             | xcpretty && exit ${PIPESTATUS[0]}
