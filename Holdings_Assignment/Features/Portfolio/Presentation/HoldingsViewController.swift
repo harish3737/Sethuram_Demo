@@ -21,6 +21,7 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
     private var summarySheetHeight: NSLayoutConstraint!
     private var expanded = false
     private var noContentView: UIView!
+    private var isAlertPresented = false
 
     init(viewModel: HoldingsViewModeling) {
         self.viewModel = viewModel
@@ -186,10 +187,11 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
             state.isLoading ? LoaderOverlayView.shared.show() : LoaderOverlayView.shared.hide()
             self.rows = state.rows
             self.tableView.reloadData()
+            self.toggleNoContentView(state.rows.isEmpty)
             if state.error != nil {
                 DispatchQueue.main.async {
                     if let alert = state.alertItem {
-                        self.showAlertOverlay(alertItem: alert)
+                        self.showAlert(alert)
                     }
                 }
             }
@@ -200,19 +202,24 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
         }
     }
     
-    func showAlertOverlay(alertItem: AlertItem) {
-        let alert = AlertOverlayView(
-            title: alertItem.title,
-            message: alertItem.message,
-            dismissButtonTitle: alertItem.dismissButtonTitle
+    func showAlert(_ alert: AlertItem) {
+        // Show the alert only if one isn't already being shown
+        guard !isAlertPresented else { return }
+
+        isAlertPresented = true
+
+        let alertView = AlertOverlayView(
+            title: alert.title,
+            message: alert.message,
+            dismissButtonTitle: alert.dismissButtonTitle
         )
 
-        alert.onDismiss = {
-            self.toggleNoContentView(true)
-            
+        alertView.onDismiss = { [weak self] in
+            self?.isAlertPresented = false
+            self?.toggleNoContentView(self?.rows.isEmpty ?? true)
         }
 
-        alert.show(in: self.view)
+        alertView.show(in: view)
     }
     
 

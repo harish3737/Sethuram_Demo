@@ -85,6 +85,7 @@ final class HoldingsViewModel: HoldingsViewModeling {
         return HoldingsViewState(
             isLoading: false,
             error: nil,
+            alertItem: nil,
             isSummaryExpanded: expanded,
             rows: rows,
             summary: sv
