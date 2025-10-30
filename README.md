@@ -2,7 +2,7 @@
 
 ![Swift Version](https://img.shields.io/badge/Swift-5.9-orange)
 ![Platform](https://img.shields.io/badge/Platform-iOS-lightgrey)
-![Xcode Version](https://img.shields.io/badge/Xcode-15-blue)
+![Xcode Version](https://img.shields.io/badge/Xcode-26-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## Overview
