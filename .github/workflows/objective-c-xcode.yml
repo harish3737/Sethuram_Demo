@@ -1,26 +1,33 @@
-name: iOS Build (Simulator only)
+name: iOS CI - Holdings_Assignment
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 jobs:
   build:
-    name: Build for iPhone 16 Pro (iOS 18.6)
-    runs-on: macos-15   # Xcode 16 + iOS 18 SDKs
+    name: Build (iPhone 16 Pro - iOS 18.6)
+    runs-on: macos-15   # macOS 15 runner includes Xcode 16
 
     steps:
-      - name: Checkout repository
+      # 1️⃣ Checkout your repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Select Xcode 16
+      # 2️⃣ Select Xcode 16
+      - name: Set up Xcode 16
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: "16.0"
 
-      - name: Build (iPhone 16 Pro, iOS 18.6)
+      # 3️⃣ Optional — Verify simulator availability
+      - name: List available simulators
+        run: xcrun simctl list devices
+
+      # 4️⃣ Clean & Build for iPhone Simulator only
+      - name: Build Holdings_Assignment (Simulator)
         run: |
           xcodebuild \
             -scheme "Holdings_Assignment" \
@@ -29,4 +36,24 @@ jobs:
             clean build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            ONLY_ACTIVE_ARCH=YES
+            ONLY_ACTIVE_ARCH=YES \
+            -allowProvisioningUpdates
+
+      # 5️⃣ (Optional) Run unit/UI tests
+      - name: Run Unit Tests (Simulator)
+        run: |
+          xcodebuild \
+            -scheme "Holdings_Assignment" \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.6' \
+            test \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
+
+      # 6️⃣ Archive build artifacts (optional)
+      - name: Archive Derived Data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DerivedData
+          path: ~/Library/Developer/Xcode/DerivedData/
