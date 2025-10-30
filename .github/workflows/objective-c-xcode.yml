@@ -1,4 +1,4 @@
-name: iOS Build (iPhone 17 only)
+name: iOS Build (Simulator only)
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
 
 jobs:
   build:
-    name: Build for iOS Simulator (iPhone 17, iOS 26)
-    runs-on: macos-15  # ✅ Latest macOS image supports iOS 26 SDK
+    name: Build for iPhone 16 Pro (iOS 18.6)
+    runs-on: macos-15   # Xcode 16 + iOS 18 SDKs
 
     steps:
       - name: Checkout repository
@@ -20,15 +20,13 @@ jobs:
         with:
           xcode-version: "16.0"
 
-      - name: List available simulators (for debug)
-        run: xcrun simctl list devices
-
-      - name: Build for iPhone 17 simulator only
+      - name: Build (iPhone 16 Pro, iOS 18.6)
         run: |
           xcodebuild \
             -scheme "Holdings_Assignment" \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.0.1' \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.6' \
             clean build \
             CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=YES
