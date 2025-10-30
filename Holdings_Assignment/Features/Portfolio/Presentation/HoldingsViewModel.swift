@@ -17,7 +17,7 @@ final class HoldingsViewModel: HoldingsViewModeling {
     private let repo: PortfolioRepository
     private let compute: ComputePortfolioUseCase
     private let store: PortfolioStoreing
-
+    
     var state = HoldingsViewState(
         isLoading: false,
         error: nil,
@@ -25,23 +25,23 @@ final class HoldingsViewModel: HoldingsViewModeling {
         rows: [],
         summary: nil
     ) { didSet { onStateChange?(state) } }
-
+    
     var onStateChange: ((HoldingsViewState) -> Void)?
-
+    
     init(repo: PortfolioRepository, compute: ComputePortfolioUseCase, store: PortfolioStoreing) {
         self.repo = repo
         self.compute = compute
         self.store = store
     }
-
+    
     func viewDidLoad() {
         Task { await load() }
     }
-
+    
     func toggleSummary() {
         state.isSummaryExpanded.toggle()
     }
-
+    
     private func load() async {
         state.isLoading = true
         do {
@@ -60,7 +60,7 @@ final class HoldingsViewModel: HoldingsViewModeling {
             )
         }
     }
-
+    
     private func makeState(holdings: [Holding], summary: PortfolioSummary, expanded: Bool) -> HoldingsViewState {
         let rows = holdings.map { h in
             let pnl = (h.ltp - h.avgPrice) * Double(h.quantity)
@@ -92,4 +92,3 @@ final class HoldingsViewModel: HoldingsViewModeling {
         )
     }
 }
-

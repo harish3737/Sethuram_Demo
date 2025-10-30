@@ -8,27 +8,27 @@
 import UIKit
 
 final class HoldingsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
-
+    
     private let viewModel: HoldingsViewModeling
-
+    
     private let tableView = UITableView(frame: .zero, style: .plain)
     private let segmented = UISegmentedControl(items: ["POSITIONS", "HOLDINGS"])
     private var rows: [HoldingRowViewData] = []
-
-    // Bottom summary sheet
+    
     private let summarySheet = SummaryBottomSheetView()
     private var summarySheetBottom: NSLayoutConstraint!
     private var summarySheetHeight: NSLayoutConstraint!
     private var expanded = false
+    
     private var noContentView: UIView!
     private var isAlertPresented = false
-
+    
     init(viewModel: HoldingsViewModeling) {
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
     required init?(coder: NSCoder) { nil }
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
@@ -40,10 +40,10 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
         viewModel.viewDidLoad()
         noContentView = createNoContentView()
         self.view.addSubview(noContentView)
-
+        
     }
     
-
+    
     private func setupSegmented() {
         segmented.selectedSegmentIndex = 1
         segmented.translatesAutoresizingMaskIntoConstraints = false
@@ -55,7 +55,7 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
             segmented.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
         ])
     }
-
+    
     private func setupTable() {
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.dataSource = self
@@ -71,7 +71,7 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
         ])
         tableView.contentInset.bottom = SummaryBottomSheetView.expandedHeight + 10
     }
-
+    
     private func setupSummarySheet() {
         view.addSubview(summarySheet)
         summarySheet.translatesAutoresizingMaskIntoConstraints = false
@@ -96,14 +96,14 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
         let noContentView = UIView()
         noContentView.backgroundColor = .systemBackground
         noContentView.translatesAutoresizingMaskIntoConstraints = false
-
+        
         let label = UILabel()
         label.text = "No Content Available"
         label.textAlignment = .center
         label.font = UIFont.systemFont(ofSize: 20, weight: .medium)
         label.textColor = .gray
         label.translatesAutoresizingMaskIntoConstraints = false
-
+        
         let retryButton = UIButton(type: .system)
         retryButton.setTitle("Retry", for: .normal)
         retryButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 18)
@@ -114,25 +114,24 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
                 action: #selector(retryTapped),
                 for: .touchUpInside
             )
-
+        
         noContentView.addSubview(label)
         noContentView.addSubview(retryButton)
-
-        // Ensure the noContentView is added to the view hierarchy **before** activating its constraints
+        
         view.addSubview(noContentView)
         NSLayoutConstraint.activate([
             noContentView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             noContentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             noContentView.topAnchor.constraint(equalTo: view.topAnchor),
             noContentView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-
+            
             label.centerXAnchor.constraint(equalTo: noContentView.centerXAnchor),
             label.centerYAnchor.constraint(equalTo: noContentView.centerYAnchor, constant: -20),
-
+            
             retryButton.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 16),
             retryButton.centerXAnchor.constraint(equalTo: noContentView.centerXAnchor)
         ])
-
+        
         noContentView.isHidden = true
         return noContentView
     }
@@ -143,16 +142,16 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
             view.bringSubviewToFront(noContentView)
         }
     }
-
+    
     
     @objc private func retryTapped() {
         viewModel.viewDidLoad()
     }
-
+    
     @objc private func summaryTapped() {
         setSummaryExpanded(!expanded, animated: true)
     }
-
+    
     private func setSummaryExpanded(_ isExpanded: Bool, animated: Bool) {
         expanded = isExpanded
         summarySheet.setExpanded(isExpanded, animated: animated)
@@ -165,7 +164,7 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
             options: [.curveEaseInOut]
         ) { self.view.layoutIfNeeded() }
     }
-
+    
     @objc private func segmentedChanged() {
         if segmented.selectedSegmentIndex == 0 {
             // Display under construction modal
@@ -177,10 +176,10 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
                 sheet.prefersGrabberVisible = true
             }
             present(vc, animated: true)
-            segmented.selectedSegmentIndex = 1 
+            segmented.selectedSegmentIndex = 1
         }
     }
-
+    
     private func bind() {
         viewModel.onStateChange = { [weak self] state in
             guard let self = self else { return }
@@ -195,7 +194,7 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
                     }
                 }
             }
-     
+            
             if let summary = state.summary {
                 self.summarySheet.configure(summary: summary, expanded: self.expanded)
             }
@@ -203,27 +202,25 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
     }
     
     func showAlert(_ alert: AlertItem) {
-        // Show the alert only if one isn't already being shown
         guard !isAlertPresented else { return }
-
         isAlertPresented = true
-
+        
         let alertView = AlertOverlayView(
             title: alert.title,
             message: alert.message,
             dismissButtonTitle: alert.dismissButtonTitle
         )
-
+        
         alertView.onDismiss = { [weak self] in
             self?.isAlertPresented = false
             self?.toggleNoContentView(self?.rows.isEmpty ?? true)
         }
-
+        
         alertView.show(in: view)
     }
     
-
-
+    
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int { rows.count }
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let vm = rows[indexPath.row]
@@ -232,5 +229,3 @@ final class HoldingsViewController: UIViewController, UITableViewDataSource, UIT
         return cell
     }
 }
-
-
