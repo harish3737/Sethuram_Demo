@@ -20,12 +20,12 @@ jobs:
           echo "✅ Using Xcode:"
           xcodebuild -version
 
-      - name: 📱 Prepare iOS Simulator (iPhone 16 Pro, latest iOS 18.x)
+      - name: 📱 Prepare iOS Simulator
         run: |
-          echo "📱 Available runtimes:"
+          echo "📱 Listing available runtimes..."
           xcrun simctl list runtimes
 
-          # Pick the latest *iOS 18.x* runtime (not 26.x)
+          # Pick latest available iOS 18 runtime
           RUNTIME=$(xcrun simctl list runtimes | grep "iOS 18" | grep -v unavailable | tail -1 | awk '{print $NF}' | tr -d '()')
           echo "✅ Using runtime: $RUNTIME"
 
@@ -38,30 +38,26 @@ jobs:
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl list devices | grep "$DEVICE_ID"
 
-      - name: 🧱 Build Holdings_Assignment
+      - name: 🧱 Build App
         run: |
-          DERIVED_DATA_PATH="$PWD/DerivedData"
-          echo "🏗️ Building app for simulator..."
+          echo "🏗️ Building Holdings_Assignment..."
           xcodebuild \
             -scheme "Holdings_Assignment" \
             -sdk iphonesimulator \
             -destination "platform=iOS Simulator,id=${DEVICE_ID}" \
-            -derivedDataPath "$DERIVED_DATA_PATH" \
             clean build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: 🧪 Run Tests
+      - name: 🧪 Run Unit Tests
         run: |
-          DERIVED_DATA_PATH="$PWD/DerivedData"
           echo "🧪 Running tests..."
           xcodebuild \
             test \
             -scheme "Holdings_Assignment" \
             -sdk iphonesimulator \
             -destination "platform=iOS Simulator,id=${DEVICE_ID}" \
-            -derivedDataPath "$DERIVED_DATA_PATH" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
@@ -69,6 +65,6 @@ jobs:
       - name: 🧹 Cleanup Simulator
         if: always()
         run: |
-          echo "🧹 Shutting down and deleting simulator..."
+          echo "🧹 Cleaning up simulator..."
           xcrun simctl shutdown "$DEVICE_ID" || true
           xcrun simctl delete "$DEVICE_ID" || true
