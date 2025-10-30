@@ -17,16 +17,16 @@ jobs:
       - name: 🛠️ Select Xcode 16
         run: |
           sudo xcode-select -s /Applications/Xcode_16.app
-          echo "✅ Xcode selected:"
+          echo "✅ Using Xcode:"
           xcodebuild -version
 
-      - name: 📱 Prepare iOS Simulator
+      - name: 📱 Prepare iOS Simulator (iPhone 16 Pro, latest iOS 18.x)
         run: |
-          echo "📱 Listing available runtimes:"
+          echo "📱 Available runtimes:"
           xcrun simctl list runtimes
 
-          # Extract the latest available iOS runtime identifier (skip unavailable)
-          RUNTIME=$(xcrun simctl list runtimes | grep "iOS" | grep -v unavailable | grep -E "com.apple.CoreSimulator.SimRuntime.iOS-[0-9]+" | tail -1 | awk '{print $NF}' | tr -d '()')
+          # Pick the latest *iOS 18.x* runtime (not 26.x)
+          RUNTIME=$(xcrun simctl list runtimes | grep "iOS 18" | grep -v unavailable | tail -1 | awk '{print $NF}' | tr -d '()')
           echo "✅ Using runtime: $RUNTIME"
 
           DEVICE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro"
@@ -36,12 +36,12 @@ jobs:
 
           echo "🚀 Booting simulator..."
           xcrun simctl boot "$DEVICE_ID" || true
-          xcrun simctl list devices
+          xcrun simctl list devices | grep "$DEVICE_ID"
 
-      - name: 🧱 Build iOS App
+      - name: 🧱 Build Holdings_Assignment
         run: |
           DERIVED_DATA_PATH="$PWD/DerivedData"
-          echo "🏗️ Building Holdings_Assignment for simulator..."
+          echo "🏗️ Building app for simulator..."
           xcodebuild \
             -scheme "Holdings_Assignment" \
             -sdk iphonesimulator \
@@ -50,15 +50,12 @@ jobs:
             clean build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            -quiet
-
-          echo "✅ Build completed successfully. Derived data stored at: $DERIVED_DATA_PATH"
+            CODE_SIGNING_ALLOWED=NO
 
       - name: 🧪 Run Tests
         run: |
           DERIVED_DATA_PATH="$PWD/DerivedData"
-          echo "🧪 Running Unit/UI Tests on simulator..."
+          echo "🧪 Running tests..."
           xcodebuild \
             test \
             -scheme "Holdings_Assignment" \
@@ -67,10 +64,7 @@ jobs:
             -derivedDataPath "$DERIVED_DATA_PATH" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            -quiet
-
-          echo "✅ Tests completed successfully."
+            CODE_SIGNING_ALLOWED=NO
 
       - name: 🧹 Cleanup Simulator
         if: always()
@@ -78,4 +72,3 @@ jobs:
           echo "🧹 Shutting down and deleting simulator..."
           xcrun simctl shutdown "$DEVICE_ID" || true
           xcrun simctl delete "$DEVICE_ID" || true
-          echo "🧼 Cleanup complete."
