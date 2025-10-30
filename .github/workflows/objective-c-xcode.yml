@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build and Analyze on iOS 18 Simulator
+    name: Build and Analyze on iOS Simulator
     runs-on: macos-latest
 
     steps:
@@ -18,18 +18,12 @@ jobs:
       - name: Select Latest Xcode
         run: sudo xcode-select -switch /Applications/Xcode.app
 
-      - name: Set Default Scheme
-        run: |
-          scheme_list=$(xcodebuild -list -json | tr -d "\n")
-          default=$(echo $scheme_list | ruby -e "require 'json'; puts JSON.parse(STDIN.gets)['project']['targets'][0]")
-          echo $default | cat >default
-          echo "Using default scheme: $default"
+      - name: Show Available Simulators
+        run: xcrun simctl list devices
 
-      - name: Build and Analyze (iPhone 15 - iOS 18.0)
-        env:
-          scheme: ${{ 'default' }}
+      - name: Build and Analyze for iPhone Simulator
         run: |
-          if [ $scheme = default ]; then scheme=$(cat default); fi
+          # Detect workspace or project
           if [ "`ls -A | grep -i \\.xcworkspace\$`" ]; then
             filetype_parameter="workspace"
             file_to_build="`ls -A | grep -i \\.xcworkspace\$`"
@@ -37,12 +31,14 @@ jobs:
             filetype_parameter="project"
             file_to_build="`ls -A | grep -i \\.xcodeproj\$`"
           fi
-
-          file_to_build=$(echo $file_to_build | awk '{$1=$1;print}')
           
-          echo "Building scheme: $scheme"
-          echo "Building $filetype_parameter: $file_to_build"
+          # Set your actual scheme name here
+          scheme="Holdings_Assignment"
 
+          echo "Building scheme: $scheme"
+          echo "Using $filetype_parameter: $file_to_build"
+
+          # Clean + Build + Analyze for iOS 18 simulator
           xcodebuild clean build analyze \
             -scheme "$scheme" \
             -"$filetype_parameter" "$file_to_build" \
