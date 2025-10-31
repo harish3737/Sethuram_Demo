@@ -26,8 +26,8 @@ jobs:
         id: simulator
         run: |
           echo "🔍 Finding latest available iOS runtime identifier..."
-          # Extract proper runtime identifier (e.g., com.apple.CoreSimulator.SimRuntime.iOS-26-0)
-          RUNTIME=$(xcrun simctl list runtimes | grep "iOS" | grep -v unavailable | tail -1 | awk -F'[()]' '{print $2}' | xargs)
+          # Extract proper runtime identifier (e.g. com.apple.CoreSimulator.SimRuntime.iOS-26-0)
+          RUNTIME=$(xcrun simctl list runtimes | grep "iOS" | grep -v unavailable | tail -1 | awk '{print $NF}' | tr -d ')')
           echo "✅ Using runtime identifier: $RUNTIME"
 
           DEVICE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro"
