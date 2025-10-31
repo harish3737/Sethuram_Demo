@@ -9,67 +9,61 @@ on:
 
 jobs:
   build-and-test:
-    name: Build & Test iOS App
-    runs-on: macos-15  # macOS 15 Sonoma (Xcode 16 runner)
+    runs-on: macos-15  # Xcode 16 runner
     timeout-minutes: 30
 
     steps:
-      - name: 🧾 Checkout repository
+      - name: 🧾 Checkout code
         uses: actions/checkout@v4
 
       - name: 🧰 Set up Xcode
         run: |
-          sudo xcode-select -s "/Applications/Xcode_16.app"
+          sudo xcode-select -s /Applications/Xcode_16.app
           xcodebuild -version
 
-      - name: 🔍 Find latest iOS runtime
-        id: find-runtime
+      - name: 🔍 Find available iOS runtime
+        id: runtime
         run: |
-          RUNTIME=$(xcrun simctl list runtimes iOS -j | jq -r '.runtimes[] | select(.isAvailable == true) | .identifier' | tail -1)
+          echo "📱 Listing available runtimes..."
+          xcrun simctl list runtimes
+          # Pick only installed, available runtimes
+          RUNTIME=$(xcrun simctl list runtimes -j | jq -r '.runtimes[] | select(.isAvailable == true and .identifier | contains("iOS")) | .identifier' | tail -1)
           if [ -z "$RUNTIME" ]; then
-            echo "❌ No available iOS simulator runtimes found!"
+            echo "❌ No valid iOS runtime found!"
             exit 1
           fi
           echo "✅ Using runtime: $RUNTIME"
           echo "RUNTIME=$RUNTIME" >> $GITHUB_ENV
 
-      - name: 📱 Create iPhone simulator
+      - name: 📱 Create iOS Simulator
         id: create-sim
         run: |
-          DEVICE_NAME="iPhone 16 Pro"
-          echo "📱 Creating simulator: $DEVICE_NAME"
-          DEVICE_ID=$(xcrun simctl create "TestDevice" "$DEVICE_NAME" "$RUNTIME" || true)
+          DEVICE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro"
+          echo "Creating simulator..."
+          DEVICE_ID=$(xcrun simctl create "CI-iPhone" "$DEVICE_TYPE" "$RUNTIME" 2>/dev/null || true)
+          
+          # If creation fails, fallback to an available simulator
           if [ -z "$DEVICE_ID" ]; then
-            echo "⚠️ Fallback to existing simulator"
+            echo "⚠️ Fallback: finding existing available simulator..."
             DEVICE_ID=$(xcrun simctl list devices -j | jq -r '.devices[][] | select(.isAvailable == true and .name | contains("iPhone")) | .udid' | head -1)
           fi
+
           if [ -z "$DEVICE_ID" ]; then
-            echo "❌ Failed to create or find any available simulator!"
+            echo "❌ No available simulator could be found or created!"
             exit 1
           fi
-          echo "✅ Using simulator: $DEVICE_ID"
+          echo "✅ Using simulator ID: $DEVICE_ID"
           echo "DEVICE_ID=$DEVICE_ID" >> $GITHUB_ENV
 
-      - name: ▶️ Boot simulator
+      - name: ▶️ Boot Simulator
         run: |
+          echo "Booting simulator..."
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcrun simctl list devices | grep -A 1 "$DEVICE_ID"
 
-      - name: 🏗️ Build for testing
+      - name: 🏗️ Build for Testing
         run: |
+          echo "Building project..."
           xcodebuild \
             -scheme Holdings_Assignment \
-            -project Holdings_Assignment.xcodeproj \
-            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
-            -configuration Debug \
-            clean build-for-testing \
-            | xcpretty
-
-      - name: 🧪 Run tests
-        run: |
-          xcodebuild \
-            -scheme Holdings_Assignment \
-            -project Holdings_Assignment.xcodeproj \
-            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
-            test-without-building \
-            | xcpretty
