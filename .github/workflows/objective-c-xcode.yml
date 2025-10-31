@@ -1,70 +1,56 @@
-name: iOS CI Build & Test
+name: Xcode - Build and Test (iOS Simulator)
 
 on:
   push:
-   branches: [ "*" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "*" ]
+    branches: [ "main" ]
 
 jobs:
   build-and-test:
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
-      - name: 🧩 Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🛠️ Select Xcode 16
-        run: |
-          sudo xcode-select -s /Applications/Xcode_16.app
-          echo "✅ Using Xcode:"
-          xcodebuild -version
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.app
 
-      - name: 📱 Prepare iOS Simulator
+      - name: Show available runtimes
         run: |
-          echo "📱 Listing available runtimes..."
+          echo "📱 Listing available runtimes:"
           xcrun simctl list runtimes
 
-          # Pick latest available iOS 18 runtime
-          RUNTIME=$(xcrun simctl list runtimes | grep "iOS 18" | grep -v unavailable | tail -1 | awk '{print $NF}' | tr -d '()')
+      - name: Create and boot iPhone simulator
+        id: simulator
+        run: |
+          # Pick the latest iOS runtime identifier (e.g., com.apple.CoreSimulator.SimRuntime.iOS-18-6)
+          RUNTIME=$(xcrun simctl list runtimes | grep "iOS" | grep -v unavailable | tail -1 | awk -F '[()]' '{print $2}')
           echo "✅ Using runtime: $RUNTIME"
 
           DEVICE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro"
-          echo "📱 Creating simulator..."
           DEVICE_ID=$(xcrun simctl create "iPhone-16-Pro-CI" "$DEVICE_TYPE" "$RUNTIME")
+          echo "✅ Created simulator with ID: $DEVICE_ID"
+
           echo "DEVICE_ID=$DEVICE_ID" >> $GITHUB_ENV
 
           echo "🚀 Booting simulator..."
-          xcrun simctl boot "$DEVICE_ID" || true
-          xcrun simctl list devices | grep "$DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID"
 
-      - name: 🧱 Build App
+          echo "⌛ Waiting for simulator to be ready..."
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+
+          xcrun simctl list devices
+
+      - name: Build and Test with xcodebuild
         run: |
-          echo "🏗️ Building Holdings_Assignment..."
+          SCHEME="Holdings_Assignment"
+          echo "📦 Building and testing scheme: $SCHEME"
           xcodebuild \
-            -scheme "Holdings_Assignment" \
-            -sdk iphonesimulator \
+            -scheme "$SCHEME" \
             -destination "platform=iOS Simulator,id=${DEVICE_ID}" \
-            clean build \
+            clean build test \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
-
-      - name: 🧪 Run Unit Tests
-        run: |
-          echo "🧪 Running tests..."
-          xcodebuild \
-            test \
-            -scheme "Holdings_Assignment" \
-            -sdk iphonesimulator \
-            -destination "platform=iOS Simulator,id=${DEVICE_ID}" \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
-
-      - name: 🧹 Cleanup Simulator
-        if: always()
-        run: |
-          echo "🧹 Cleaning up simulator..."
-          xcrun simctl shutdown "$DEVICE_ID" || true
-          xcrun simctl delete "$DEVICE_ID" || true
+            | xcpretty
