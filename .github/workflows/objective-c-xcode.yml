@@ -1,0 +1,69 @@
+name: iOS Build & Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: macos-15  # Xcode 16 runner
+    timeout-minutes: 30
+
+    steps:
+      - name: 🧾 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🧰 Set up Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.app
+          xcodebuild -version
+
+      - name: 🔍 Find available iOS runtime
+        id: runtime
+        run: |
+          echo "📱 Listing available runtimes..."
+          xcrun simctl list runtimes
+          # Pick only installed, available runtimes
+          RUNTIME=$(xcrun simctl list runtimes -j | jq -r '.runtimes[] | select(.isAvailable == true and .identifier | contains("iOS")) | .identifier' | tail -1)
+          if [ -z "$RUNTIME" ]; then
+            echo "❌ No valid iOS runtime found!"
+            exit 1
+          fi
+          echo "✅ Using runtime: $RUNTIME"
+          echo "RUNTIME=$RUNTIME" >> $GITHUB_ENV
+
+      - name: 📱 Create iOS Simulator
+        id: create-sim
+        run: |
+          DEVICE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro"
+          echo "Creating simulator..."
+          DEVICE_ID=$(xcrun simctl create "CI-iPhone" "$DEVICE_TYPE" "$RUNTIME" 2>/dev/null || true)
+          
+          # If creation fails, fallback to an available simulator
+          if [ -z "$DEVICE_ID" ]; then
+            echo "⚠️ Fallback: finding existing available simulator..."
+            DEVICE_ID=$(xcrun simctl list devices -j | jq -r '.devices[][] | select(.isAvailable == true and .name | contains("iPhone")) | .udid' | head -1)
+          fi
+
+          if [ -z "$DEVICE_ID" ]; then
+            echo "❌ No available simulator could be found or created!"
+            exit 1
+          fi
+          echo "✅ Using simulator ID: $DEVICE_ID"
+          echo "DEVICE_ID=$DEVICE_ID" >> $GITHUB_ENV
+
+      - name: ▶️ Boot Simulator
+        run: |
+          echo "Booting simulator..."
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcrun simctl list devices | grep -A 1 "$DEVICE_ID"
+
+      - name: 🏗️ Build for Testing
+        run: |
+          echo "Building project..."
+          xcodebuild \
+            -scheme Holdings_Assignment \
