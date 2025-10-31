@@ -25,28 +25,29 @@ jobs:
       - name: Create and boot iPhone simulator
         id: simulator
         run: |
-          # Pick the latest iOS runtime identifier (e.g., com.apple.CoreSimulator.SimRuntime.iOS-18-6)
-          RUNTIME=$(xcrun simctl list runtimes | grep "iOS" | grep -v unavailable | tail -1 | awk -F '[()]' '{print $2}')
-          echo "✅ Using runtime: $RUNTIME"
+          echo "🔍 Finding latest available iOS runtime identifier..."
+          # Extract proper runtime identifier (e.g., com.apple.CoreSimulator.SimRuntime.iOS-26-0)
+          RUNTIME=$(xcrun simctl list runtimes | grep "iOS" | grep -v unavailable | tail -1 | awk -F'[()]' '{print $2}' | xargs)
+          echo "✅ Using runtime identifier: $RUNTIME"
 
           DEVICE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro"
+          echo "📱 Creating simulator..."
           DEVICE_ID=$(xcrun simctl create "iPhone-16-Pro-CI" "$DEVICE_TYPE" "$RUNTIME")
-          echo "✅ Created simulator with ID: $DEVICE_ID"
-
+          echo "✅ Created simulator: $DEVICE_ID"
           echo "DEVICE_ID=$DEVICE_ID" >> $GITHUB_ENV
 
           echo "🚀 Booting simulator..."
-          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID" || true
 
-          echo "⌛ Waiting for simulator to be ready..."
+          echo "⌛ Waiting for simulator to finish booting..."
           xcrun simctl bootstatus "$DEVICE_ID" -b
 
           xcrun simctl list devices
 
-      - name: Build and Test with xcodebuild
+      - name: Build and Test
         run: |
           SCHEME="Holdings_Assignment"
-          echo "📦 Building and testing scheme: $SCHEME"
+          echo "🏗️ Building and testing scheme: $SCHEME"
           xcodebuild \
             -scheme "$SCHEME" \
             -destination "platform=iOS Simulator,id=${DEVICE_ID}" \
